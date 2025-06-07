@@ -1,0 +1,126 @@
+.week-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.nav-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.nav-button:hover {
+  background-color: #0056b3;
+}
+
+.week-calendar {
+  display: flex;
+  justify-content: space-around;
+  flex-grow: 1;
+  margin: 0 20px;
+}
+
+.day-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: box-shadow 0.3s ease;
+}
+
+.day-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.day-card.selected {
+  background-color: #f0f0f0;
+  border-color: #007bff;
+}
+
+.day-card.fully-booked {
+  background-color: #ffcccc;
+}
+
+.day-card.user-booked {
+  border-color: #007bff;
+  background-color: green;
+}
+
+.day-name {
+  font-weight: bold;
+}
+
+.day-number {
+  font-size: 1.5em;
+}
+
+.calendar {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    margin-bottom: 1em;
+}
+
+.fully-booked {
+    background-color: #ffcccc;
+}
+
+.calendar-container {
+    padding: 1em;
+    margin-bottom: 1em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.booking-details {
+    margin-top: 1em;
+}
+
+.booked {
+    background-color: #e0f7fa;
+}
+
+.available {
+    background-color: #ffffff;
+}
+
+.header {
+    padding: 1em;
+    margin-bottom: 1em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.error-message {
+    color: red;
+    margin-bottom: 1em;
+}
+
+.timeslot-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.timeslot-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5em;
+    border-bottom: 1px solid #ddd;
+}
+
+.timeslot-text {
+    margin-left: 0.5em;
+}

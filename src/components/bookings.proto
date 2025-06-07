@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+message Booking {
+  string timeslot = 1;
+  string user = 2;
+  string apartment = 3;
+}
+
+message Bookings {
+  string project_id = 1; // Unique ID for the project
+  map<string, BookingList> bookings_by_date = 2; // Key is the date
+}
+
+message BookingList {
+  repeated Booking bookings = 1; // List of bookings for a specific date
+}
