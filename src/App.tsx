@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import Login from './components/Login';
+//import Login from './components/Login';
 import CalendarComponent from './components/Calendar';
 import './App.css';
-import FacebookLogin from './components/FacebookLogin';
+//import FacebookLogin from './components/FacebookLogin';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
+  const [user, _setUser] = useState<any>(null);
 
-  const handleLogin = (userData: any) => {
-    const apartment = prompt("Please enter your apartment number:");
-    setUser({ ...userData, apartment });
-  };
+  // const handleLogin = (userData: any) => {
+  //   const apartment = prompt("Please enter your apartment number:");
+  //   setUser({ ...userData, apartment });
+  // };
 
   //if (!user) {
   //  return <FacebookLogin 

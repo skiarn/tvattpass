@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 declare global {
   interface Window {
     FB: any;
+    fbAsyncInit?: () => void;
   }
 }
 
