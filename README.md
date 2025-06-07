@@ -1,6 +1,10 @@
 # Tvattpass 
 
-Tvättpass Is a washing booking web app
+Tvättpass is a washing booking web app build to experiment with facebook pages and firebase
+
+https://skiarn.github.io/tvattpass/
+
+
 
 ## Proto
 protoc --plugin=protoc-gen-ts=./node_modules/.bin/protoc-gen-ts \

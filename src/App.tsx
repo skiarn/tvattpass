@@ -24,7 +24,7 @@ const App: React.FC = () => {
   return (
     <div className='App'>
       <div className='header'>
-        <img src="/icon.png" alt="Tvättpass Icon" className='header-icon' />
+        <img src="./icon.png" alt="Tvättpass Icon" className='header-icon' />
         <h1 className='header-title'>Tvättpass</h1>
       </div>
       <div className='content-container'>
