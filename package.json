@@ -13,7 +13,6 @@
   "dependencies": {
     "googleapis": "^148.0.0",
     "react": "^19.0.0",
-    "react-calendar": "^5.1.0",
     "react-dom": "^19.0.0",
     "react-facebook-login": "^4.1.1",
     "xlsx": "^0.18.5"
