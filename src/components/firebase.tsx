@@ -8,6 +8,7 @@ import './firebase.css';
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   // ...
 };
 // Only initialize if not already initialized
@@ -75,7 +76,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ children }) => {
     <FirebaseContext.Provider value={firebase}>
       <div>
         <p>
-          Welcome {user.displayName ?? ''}! You are now signed-in!
+          Welcome {user.displayName ?? ''}
         </p>
         {children ? children(user) : null}
       </div>
