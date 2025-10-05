@@ -1,14 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { useFirebase } from './firebase';
+import React, { useState } from 'react';
+import { useFirebase } from './firebaseClient';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
-
-interface Association {
-  id: string;
-  name: string;
-  admins: string[];
-  members: string[];
-}
+import WashingLoader from './WashingLoader';
+import { Association } from '../types/association';
 
 interface AssociationSelectorProps {
   onSelect: (association: Association) => void;
@@ -48,9 +43,13 @@ const AssociationSelector: React.FC<AssociationSelectorProps> = ({ onSelect, ass
       });
       setLoading(false);
       onSelect({ id: docRef.id, name: newName, admins: [user.uid], members: [user.uid] });
-    } catch (err: any) {
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to create association.');
+      } else {
+        setError('Failed to create association.');
+      }      
       setLoading(false);
-      setError(err.message || 'Failed to create association.');
     }
   };
 
@@ -77,9 +76,13 @@ const AssociationSelector: React.FC<AssociationSelectorProps> = ({ onSelect, ass
       const assoc = associations.find(a => a.id === selectedId);
       setLoading(false);
       if (assoc) onSelect({ ...assoc, members: [...assoc.members, user.uid] });
-    } catch (err: any) {
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to join association.');
+      } else {
+        setError('Failed to join association.');
+      }
       setLoading(false);
-      setError(err.message || 'Failed to join association.');
     }
   };
 
@@ -95,6 +98,7 @@ const AssociationSelector: React.FC<AssociationSelectorProps> = ({ onSelect, ass
           onChange={e => setNewName(e.target.value)}
         />
         <button onClick={handleCreate} disabled={loading || !newName}>{loading ? 'Creating...' : 'Create'}</button>
+        {loading && <WashingLoader />}
       </div>
       <div>
         <select value={selectedId} onChange={e => setSelectedId(e.target.value)}>
@@ -104,6 +108,7 @@ const AssociationSelector: React.FC<AssociationSelectorProps> = ({ onSelect, ass
           ))}
         </select>
         <button onClick={handleJoin} disabled={loading || !selectedId}>{loading ? 'Joining...' : 'Join'}</button>
+        {loading && <WashingLoader />}
       </div>
     </div>
   );

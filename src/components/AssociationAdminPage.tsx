@@ -1,21 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useFirebase } from './firebase';
+import { useFirebase } from './firebaseClient';
+import WashingLoader from './WashingLoader';
+import { Association, JoinRequest } from '../types/association';
 
-interface Association {
-  id: string;
-  name: string;
-  admins: string[];
-  members: string[];
-}
-
-interface JoinRequest {
-  userId: string;
-  name?: string;
-  email?: string;
-  role?: string;
-}
-
-const AssociationAdminPage: React.FC<{ association: Association; onClose: () => void }> = ({ association, onClose }) => {
+const AssociationAdminPage: React.FC<{ association: Association; }> = ({ association }) => {
   const firebase = useFirebase();
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [members, setMembers] = useState<string[]>(association.members);
@@ -45,8 +33,12 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
           .get();
         const requests = snapshot.docs.map(doc => ({ userId: doc.id, ...doc.data() } as JoinRequest));
         setJoinRequests(requests);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch join requests');
+      } catch (err) {
+        setError(
+          typeof err === 'object' && err !== null && 'message' in err
+            ? (err as { message?: string }).message || 'Failed to fetch join requests'
+            : 'Failed to fetch join requests'
+        );
       }
       // Fetch apartments for all members
       try {
@@ -56,8 +48,12 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
           apartmentsData[userId] = userDoc.exists ? userDoc.data()?.apartment || '' : '';
         }
         setApartments(apartmentsData);
-      } catch (err: any) {
-        setError('Failed to fetch apartments');
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to fetch apartments');
+        } else {
+          setError('Failed to fetch apartments');
+        }
       }
       setLoading(false);
     };
@@ -65,6 +61,10 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
   }, [firebase, association.id, members]);
 
   const handleApprove = async (userId: string, role: string) => {
+    if (!firebase) {
+      setError('Firebase is not available');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -79,8 +79,12 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
       setMembers(prev => [...prev, userId]);
       if (role === 'admin') setAdmins(prev => [...prev, userId]);
       setJoinRequests(prev => prev.filter(r => r.userId !== userId));
-    } catch (err: any) {
-      setError(err.message || 'Failed to approve invite');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to approve invite');
+      } else {
+        setError('Failed to approve invite');
+      }
     }
     setLoading(false);
   };
@@ -88,13 +92,17 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
   
 
   const handleApartmentChange = async (userId: string, value: string) => {
-    if (!firebase || !admins.includes(currentUser?.uid)) return;
+    if (!firebase || !admins.includes(currentUser?.uid || '')) return;
     setLoading(true);
     try {
       await firebase.firestore().collection('users').doc(userId).update({ apartment: value });
       setApartments(prev => ({ ...prev, [userId]: value }));
-    } catch (err: any) {
-      setError('Failed to update apartment');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to update apartment');
+      } else {
+        setError('Failed to update apartment');
+      }
     }
     setLoading(false);
   };
@@ -107,7 +115,6 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
   return (
     <div style={{ padding: 16 }}>
       <h2>Admin: {association.name}</h2>
-      <button onClick={onClose}>Close</button>
       {error && <div style={{ color: 'red' }}>{error}</div>}
       <h3>Members</h3>
       <ul>
@@ -115,7 +122,7 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
           <li key={uid}>
             {uid}{admins.includes(uid) ? ' (admin)' : ' (user)'}
             {' | Apartment: '}
-            {admins.includes(currentUser?.uid) ? (
+            {admins.includes(currentUser?.uid || '') ? (
               <>  
                 <input
                     type="text"
@@ -126,6 +133,7 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
                 <button onClick={() => handleApartmentChange(uid, apartmentInputs[uid] || '')} disabled={loading}>
                     {loading ? 'Updating...' : 'Update'}
                 </button>
+                {loading && <WashingLoader />}
               </>
             ) : (
               <span style={{ marginLeft: 8 }}>{apartments[uid] || ''}</span>
@@ -134,7 +142,7 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
         ))}
       </ul>
       <h3>Invited Users</h3>
-      {loading && <div>Loading...</div>}
+      {loading && <WashingLoader />}
       <ul>
         {joinRequests.map(r => (
           <li key={r.userId}>
@@ -146,6 +154,7 @@ const AssociationAdminPage: React.FC<{ association: Association; onClose: () => 
             <button onClick={() => handleApprove(r.userId, (document.getElementById(`role-${r.userId}`) as HTMLSelectElement).value)} disabled={loading}>
               Approve
             </button>
+            {loading && <WashingLoader />}
           </li>
         ))}
       </ul>

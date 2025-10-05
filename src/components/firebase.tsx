@@ -1,29 +1,7 @@
 // Import FirebaseAuth and firebase.
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
+import React, { useEffect, useState } from 'react';
 import './firebase.css';
-
-// Configure Firebase.
-const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  // ...
-};
-// Only initialize if not already initialized
-if (!firebase.apps.length) {
-  firebase.initializeApp(config);
-}
-
-// Connect to Auth emulator if running locally
-//if (window.location.hostname === 'localhost') {
-//  firebase.auth().useEmulator('http://localhost:9099/');
-//}
-
-const FirebaseContext = createContext<typeof firebase | null>(null);
-
-const useFirebase = () => useContext(FirebaseContext);
+import firebase, { FirebaseContext } from './firebaseClient';
 
 type SignInScreenProps = {
   children?: (user: firebase.User) => React.ReactNode;
@@ -75,14 +53,10 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ children }) => {
   return (
     <FirebaseContext.Provider value={firebase}>
       <div>
-        <p>
-          Welcome {user.displayName ?? ''}
-        </p>
         {children ? children(user) : null}
       </div>
     </FirebaseContext.Provider>
   );
 }
 
-export { FirebaseContext, useFirebase };
 export default SignInScreen;

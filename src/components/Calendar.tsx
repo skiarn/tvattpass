@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Calendar.css';
-import { useFirebase } from './firebase'; // Adjust the import based on your project structure
+import { useFirebase } from './firebaseClient'; // Adjust the import based on your project structure
 
 enum Timeslot {
   Morning = "06:00-10:00",
@@ -11,10 +11,13 @@ enum Timeslot {
 
 const timeslots = Object.values(Timeslot); // Use Timeslot enum values
 
+import { Association } from '../types/association';
+import firebase from 'firebase/compat/app';
+
 interface CalendarComponentProps {
-  user: any;
+  user: firebase.User;
   maxBookingsPerUser?: number;
-  associations?: any[];
+  associations?: Association[];
 }
 
 interface Booking {
@@ -44,6 +47,7 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
   const activeAssociation = associations && associations.length > 0 ? associations[0] : null;
+  const userDisplayName = user ? (user.displayName || user.email || user.uid) : '';
 
   // Fetch bookings from Firestore for the selected association and date
   useEffect(() => {
@@ -64,26 +68,31 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
     if (!firebase || !activeAssociation) return;
     const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000);
     const currentBookings = bookings[dateKey] || [];
-    if (currentBookings.some((booking) => booking.timeslot === timeslot && booking.user === user.name)) {
+  const userDisplayName = user.displayName || user.email || user.uid;
+  if (currentBookings.some((booking) => booking.timeslot === timeslot && booking.user === userDisplayName)) {
       await handleUnbooking(timeslot);
       return;
     }
-    if (currentBookings.some((booking) => booking.timeslot === timeslot)) {
+  if (currentBookings.some((booking) => booking.timeslot === timeslot)) {
       setError('This timeslot is already booked.');
       return;
     }
-    const userBookings = currentBookings.filter((booking) => booking.user === user.name);
+  const userBookings = currentBookings.filter((booking) => booking.user === userDisplayName);
     if (userBookings.length >= maxBookingsPerUser) {
       setError('You have reached your booking limit.');
       return;
     }
+
+    const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+    const apartmentsData: string = userDoc.exists ? userDoc.data()?.apartment || '' : '';
+    
     // Add booking to Firestore
     await firebase.firestore().collection('bookings').add({
       associationId: activeAssociation.id,
       date: dateKey,
       timeslot,
-      user: user.displayName || user.email || user.uid,
-      apartment: user.apartment || '',
+      user: userDisplayName,
+      apartment: apartmentsData,
       userId: user.uid,
     });
     setError(null);
@@ -131,7 +140,7 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
 
   const userHasBooking = (date: Date) => {
     const dateKey = Math.floor(startOfDay(date).getTime() / 1000); // Use startOfDay
-    return bookings[dateKey]?.some((booking) => booking.user === user.name);
+  return bookings[dateKey]?.some((booking) => booking.user === userDisplayName);
   };
 
   const startOfWeek = (date: Date) => {
@@ -200,7 +209,7 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
                 <input
                   type="checkbox"
                   checked={!!booking}
-                  disabled={isPastDate(selectedDate) || (!!booking && booking.user !== user.name)}
+                  disabled={isPastDate(selectedDate) || (!!booking && booking.user !== userDisplayName)}
                   onChange={() => handleBooking(timeslot)}
                 />
                 <span className="timeslot-text">

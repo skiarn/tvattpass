@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useFirebase } from './firebase';
+import { useFirebase } from './firebaseClient';
+import { useNavigate } from 'react-router-dom';
+import WashingLoader from './WashingLoader';
+import { User } from "firebase/auth";
+import { Association } from '../types/association';
 
-interface Association {
-  id: string;
-  name: string;
-  admins: string[];
-  members: string[];
-  joinRequests?: { userId: string; name?: string; email?: string; role?: string }[];
-}
-
-const Menu: React.FC<{ user: any; onAdminSelect?: (association: Association) => void }> = ({ user, onAdminSelect }) => {
+const Menu: React.FC<{ user: User; onAdminSelect?: (association: Association) => void }> = ({ user, onAdminSelect }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(false);
-    const firebase = useFirebase();
+  const navigate = useNavigate();
+  const firebase = useFirebase();
     // Use the user prop directly
 
   useEffect(() => {
@@ -22,8 +19,16 @@ const Menu: React.FC<{ user: any; onAdminSelect?: (association: Association) => 
       setLoading(true);
       const snapshot = await firebase.firestore().collection('condominiumAssociations')
         .where('members', 'array-contains', user.uid).get();
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
-      setAssociations(data);
+      const memberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
+
+      // small discovery list to allow joining associations (limited to 20)
+      const discoverSnapshot = await firebase.firestore().collection('condominiumAssociations')
+        .limit(20).get();
+      const discoverData = discoverSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
+
+      // merge and dedupe by id, keep memberData first
+      const combined = [...memberData, ...discoverData].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      setAssociations(combined);
       setLoading(false);
     };
     if (menuOpen) {
@@ -37,11 +42,19 @@ const Menu: React.FC<{ user: any; onAdminSelect?: (association: Association) => 
     }
   };
 
-  const handleAdminSelect = (association: Association) => {
+  
+
+  const handleNavigateToAssociation = (association: Association) => {
+    setMenuOpen(false);
+    navigate(`/association/${association.id}`);
+  };
+
+  const handleNavigateToAdmin = (association: Association) => {
     if (onAdminSelect) {
       onAdminSelect(association);
     }
     setMenuOpen(false);
+    navigate(`/association/${association.id}/admin`);
   };
 
   return (
@@ -61,24 +74,45 @@ const Menu: React.FC<{ user: any; onAdminSelect?: (association: Association) => 
         <div className="menu-dropdown">
           <div style={{ marginBottom: 8 }}>
             <strong>Associations</strong>
-            {loading && <div>Loading...</div>}
+            {loading && <WashingLoader />}
             {!loading && associations.length === 0 && <div>No associations</div>}
             <ul style={{ listStyle: 'none', padding: 0 }}>
               {associations.map(a => (
                 <li key={a.id} style={{ marginBottom: 4 }}>
-                  {a.name}
+                  <button
+                    onClick={() => handleNavigateToAssociation(a)}
+                    aria-label={`Open association ${a.name}`}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      margin: 0,
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      font: 'inherit',
+                    }}
+                  >
+                    {a.name}
+                  </button>
                   {a.admins.includes(user?.uid || '') ? (
-                    <button style={{ marginLeft: 8 }} onClick={() => handleAdminSelect(a)}>
+                    <button style={{ marginLeft: 8 }} onClick={() => handleNavigateToAdmin(a)}>
                       Admin
                     </button>
                   ) : (
-                    <span style={{ marginLeft: 8, color: '#888' }}>(member)</span>
+                    // if not a member, show Join link; otherwise show (member)
+                    (a.members?.includes(user?.uid || '') ? (
+                      <span style={{ marginLeft: 8, color: '#888' }}>(member)</span>
+                    ) : (
+                      <button style={{ marginLeft: 8 }} onClick={() => { setMenuOpen(false); navigate(`/association/${a.id}/join`); }}>
+                        Join
+                      </button>
+                    ))
                   )}
                 </li>
               ))}
             </ul>
           </div>
-          <button onClick={handleLogout}>Logout</button>
+          <button onClick={handleLogout}>Logout ({user.displayName ?? ''})</button>
         </div>
       )}
     </>
