@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Calendar.css';
+import { useFirebase } from './firebaseClient'; // Adjust the import based on your project structure
 
 enum Timeslot {
   Morning = "06:00-10:00",
@@ -10,9 +11,13 @@ enum Timeslot {
 
 const timeslots = Object.values(Timeslot); // Use Timeslot enum values
 
+import { Association } from '../types/association';
+import firebase from 'firebase/compat/app';
+
 interface CalendarComponentProps {
-  user: any;
+  user: firebase.User;
   maxBookingsPerUser?: number;
+  associations?: Association[];
 }
 
 interface Booking {
@@ -36,61 +41,91 @@ const startOfDay = (date: Date) => {
 
 //how many 
 
-const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookingsPerUser = 1 }) => {
-  
-  const onedayAgo = new Date();
-  onedayAgo.setDate(onedayAgo.getDate() - 1);
-  onedayAgo.setHours(0, 0, 0, 0);
-  const onedayAgoNumb = Math.floor(onedayAgo.getTime() / 1000);
-  const twoDaysAgo = new Date();
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-  twoDaysAgo.setHours(0, 0, 0, 0);
-  const twoDaysAgoNumb = Math.floor(twoDaysAgo.getTime()
-  / 1000);
-  const [bookings, setBookings] = useState<Bookings>({
-    [onedayAgoNumb]: [
-      { timeslot: Timeslot.Morning, user: 'User1', apartment: 'A1' },
-      { timeslot: Timeslot.Midday, user: 'User2', apartment: 'A2' },
-      { timeslot: Timeslot.Afternoon, user: 'User3', apartment: 'A3' },
-      { timeslot: Timeslot.Evening, user: 'User4', apartment: 'A4' },
-    ],
-    [twoDaysAgoNumb]: [
-      { timeslot: Timeslot.Midday, user: 'User2', apartment: 'A2' },
-      { timeslot: Timeslot.Afternoon, user: 'User3', apartment: 'A3' },
-      { timeslot: Timeslot.Evening, user: 'User4', apartment: 'A4' },
-    ]
-  });
+const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookingsPerUser = 1, associations }) => {
+  const firebase = useFirebase();
+  const [bookings, setBookings] = useState<Bookings>({});
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
+  const activeAssociation = associations && associations.length > 0 ? associations[0] : null;
+  const userDisplayName = user ? (user.displayName || user.email || user.uid) : '';
 
-  const handleBooking = (timeslot: Timeslot) => { // Update parameter type
-    const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000); // Use startOfDay
-    if (!bookings[dateKey]) {
-      bookings[dateKey] = [];
-    }
-    if (bookings[dateKey].some((booking) => booking.timeslot === timeslot && booking.user === user.name)) {
-      handleUnbooking(timeslot);
+  // Fetch bookings from Firestore for the selected association and date
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!firebase || !activeAssociation) return;
+      const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000);
+      const snapshot = await firebase.firestore().collection('bookings')
+        .where('associationId', '==', activeAssociation.id)
+        .where('date', '==', dateKey)
+        .get();
+      const data: Booking[] = snapshot.docs.map(doc => doc.data() as Booking);
+      setBookings({ [dateKey]: data });
+    };
+    fetchBookings();
+  }, [firebase, activeAssociation, selectedDate]);
+
+  const handleBooking = async (timeslot: Timeslot) => {
+    if (!firebase || !activeAssociation) return;
+    const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000);
+    const currentBookings = bookings[dateKey] || [];
+  const userDisplayName = user.displayName || user.email || user.uid;
+  if (currentBookings.some((booking) => booking.timeslot === timeslot && booking.user === userDisplayName)) {
+      await handleUnbooking(timeslot);
       return;
     }
-    if (bookings[dateKey].some((booking) => booking.timeslot === timeslot)) {
+  if (currentBookings.some((booking) => booking.timeslot === timeslot)) {
       setError('This timeslot is already booked.');
       return;
     }
-    const userBookings = bookings[dateKey].filter((booking) => booking.user === user.name);
+  const userBookings = currentBookings.filter((booking) => booking.user === userDisplayName);
     if (userBookings.length >= maxBookingsPerUser) {
-      setError(`Max ${maxBookingsPerUser} timeslot(s) per day.`);
+      setError('You have reached your booking limit.');
       return;
     }
-    bookings[dateKey].push({ timeslot, user: user.name, apartment: user.apartment });
-    setBookings({ ...bookings });
+
+    const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+    const apartmentsData: string = userDoc.exists ? userDoc.data()?.apartment || '' : '';
+    
+    // Add booking to Firestore
+    await firebase.firestore().collection('bookings').add({
+      associationId: activeAssociation.id,
+      date: dateKey,
+      timeslot,
+      user: userDisplayName,
+      apartment: apartmentsData,
+      userId: user.uid,
+    });
     setError(null);
+    // Refetch bookings
+    const snapshot = await firebase.firestore().collection('bookings')
+      .where('associationId', '==', activeAssociation.id)
+      .where('date', '==', dateKey)
+      .get();
+    const data: Booking[] = snapshot.docs.map(doc => doc.data() as Booking);
+    setBookings({ [dateKey]: data });
   };
 
-  const handleUnbooking = (timeslot: Timeslot) => { // Update parameter type
-    const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000); // Use startOfDay
-    bookings[dateKey] = bookings[dateKey].filter((booking) => !(booking.timeslot === timeslot && booking.user === user.name));
-    setBookings({ ...bookings });
+  const handleUnbooking = async (timeslot: Timeslot) => {
+    if (!firebase || !activeAssociation) return;
+    const dateKey = Math.floor(startOfDay(selectedDate).getTime() / 1000);
+    // Find the booking document to delete
+    const snapshot = await firebase.firestore().collection('bookings')
+      .where('associationId', '==', activeAssociation.id)
+      .where('date', '==', dateKey)
+      .where('timeslot', '==', timeslot)
+      .where('userId', '==', user.uid)
+      .get();
+    for (const doc of snapshot.docs) {
+      await doc.ref.delete();
+    }
     setError(null);
+    // Refetch bookings
+    const newSnapshot = await firebase.firestore().collection('bookings')
+      .where('associationId', '==', activeAssociation.id)
+      .where('date', '==', dateKey)
+      .get();
+    const data: Booking[] = newSnapshot.docs.map(doc => doc.data() as Booking);
+    setBookings({ [dateKey]: data });
   };
 
   const isFullyBooked = (date: Date) => {
@@ -105,7 +140,7 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
 
   const userHasBooking = (date: Date) => {
     const dateKey = Math.floor(startOfDay(date).getTime() / 1000); // Use startOfDay
-    return bookings[dateKey]?.some((booking) => booking.user === user.name);
+  return bookings[dateKey]?.some((booking) => booking.user === userDisplayName);
   };
 
   const startOfWeek = (date: Date) => {
@@ -174,7 +209,7 @@ const CalendarComponent: React.FC<CalendarComponentProps> = ({ user, maxBookings
                 <input
                   type="checkbox"
                   checked={!!booking}
-                  disabled={isPastDate(selectedDate) || (!!booking && booking.user !== user.name)}
+                  disabled={isPastDate(selectedDate) || (!!booking && booking.user !== userDisplayName)}
                   onChange={() => handleBooking(timeslot)}
                 />
                 <span className="timeslot-text">

@@ -53,7 +53,7 @@
 .header {
   width: 100%;
   background-color: white;
-  padding: 0.5em;
+  padding: 1em;
   margin-bottom: 1.5em;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   display: flex;
@@ -81,4 +81,60 @@
   max-width: 1200px;
   padding: 0 1em;
   box-sizing: border-box;
+}
+
+.hamburger-menu {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.hamburger-icon {
+  width: 30px;
+  height: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hamburger-bar {
+  display: block;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  width: 100%;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-width: 120px;
+  padding: 0.5rem 0;
+  z-index: 101;
+}
+
+.menu-dropdown button {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #333;
 }

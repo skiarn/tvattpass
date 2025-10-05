@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import WashingLoader from './WashingLoader';
 //import './PublicSpreadsheetReader.css';
 
 const PublicSpreadsheetReader: React.FC = () => {
@@ -26,8 +27,13 @@ const PublicSpreadsheetReader: React.FC = () => {
         );
         
         setData(rows);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          console.error(err);
+          setError('An unknown error occurred');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -37,7 +43,7 @@ const PublicSpreadsheetReader: React.FC = () => {
   }, []);
 
   if (isLoading) {
-    return <div className="loading">Loading data...</div>;
+    return <WashingLoader />;
   }
 
   if (error) {
