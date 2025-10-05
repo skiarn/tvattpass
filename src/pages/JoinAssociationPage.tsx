@@ -42,14 +42,13 @@ const JoinAssociationPage: React.FC = () => {
       userId: user.uid,
       name: user.displayName || null,
       email: user.email || null,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
     try {
-      // add to association joinRequests array
+      // add to association joinRequests array (no serverTimestamp inside arrayUnion)
       await firebase.firestore().collection('condominiumAssociations').doc(association.id).update({
         joinRequests: firebase.firestore.FieldValue.arrayUnion(requestObj),
       });
-      // also create a top-level joinRequests document for easy querying
+      // also create a top-level joinRequests document for easy querying and timestamp it there
       await firebase.firestore().collection('joinRequests').add({
         associationId: association.id,
         associationName: association.name || null,

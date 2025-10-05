@@ -18,7 +18,15 @@ const AssociationAdminRoute: React.FC = () => {
       setLoading(true);
       const doc = await firebase.firestore().collection('condominiumAssociations').doc(id).get();
       if (doc.exists) {
-        setAssociation({ id: doc.id, ...doc.data() });
+        const data = doc.data() as Partial<Association>;
+        setAssociation({
+          id: doc.id,
+          name: data?.name ?? '',
+          admins: Array.isArray(data?.admins) ? data.admins : [],
+          members: Array.isArray(data?.members) ? data.members : [],
+          joinRequests: Array.isArray(data?.joinRequests) ? data.joinRequests : undefined,
+          ...data,
+        } as Association);
       } else {
         setAssociation(null);
       }
@@ -29,6 +37,7 @@ const AssociationAdminRoute: React.FC = () => {
 
   if (loading) return <WashingLoader />;
   if (!association) return <div>Association not found</div>;
+  if (!currentUser) return <Navigate to="/" replace />; // Redirect to root if not logged in
 
   // Only allow admins to view admin page
   const isAdmin = association.admins?.includes(currentUser?.uid);

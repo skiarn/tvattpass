@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useFirebase } from './firebaseClient';
 import { useNavigate } from 'react-router-dom';
 import WashingLoader from './WashingLoader';
-import { User } from "firebase/auth";
+import firebase from 'firebase/compat/app';
+
 import { Association } from '../types/association';
 
-const Menu: React.FC<{ user: User; onAdminSelect?: (association: Association) => void }> = ({ user, onAdminSelect }) => {
+const Menu: React.FC<{ user: firebase.User; onAdminSelect?: (association: Association) => void }> = ({ user, onAdminSelect }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(false);
@@ -17,19 +18,25 @@ const Menu: React.FC<{ user: User; onAdminSelect?: (association: Association) =>
     const fetchAssociations = async () => {
       if (!user || !firebase) return;
       setLoading(true);
-      const snapshot = await firebase.firestore().collection('condominiumAssociations')
-        .where('members', 'array-contains', user.uid).get();
-      const memberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
+      try {
+        const snapshot = await firebase.firestore().collection('condominiumAssociations')
+          .where('members', 'array-contains', user.uid).get();
+        const memberData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
 
-      // small discovery list to allow joining associations (limited to 20)
-      const discoverSnapshot = await firebase.firestore().collection('condominiumAssociations')
-        .limit(20).get();
-      const discoverData = discoverSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
+        // small discovery list to allow joining associations (limited to 20)
+        const discoverSnapshot = await firebase.firestore().collection('condominiumAssociations')
+          .limit(20).get();
+        const discoverData = discoverSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Association));
 
-      // merge and dedupe by id, keep memberData first
-      const combined = [...memberData, ...discoverData].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-      setAssociations(combined);
-      setLoading(false);
+        // merge and dedupe by id, keep memberData first
+        const combined = [...memberData, ...discoverData].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        setAssociations(combined);
+      } catch (err) {
+        console.error('Failed to fetch associations:', err);
+      }
+      finally {
+        setLoading(false);
+      }
     };
     if (menuOpen) {
       fetchAssociations();

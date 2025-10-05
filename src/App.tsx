@@ -70,6 +70,7 @@ const AppContent: React.FC<{ user: firebase.User }> = ({ user }) => {
   }
 
   if (associations.length > 0) {
+    
     // Redirect to the first association's route so the app uses routing
     return <Navigate to={`/association/${associations[0].id}`} replace />;
   }
@@ -87,7 +88,7 @@ const App: React.FC = () => {
               <div className='header'>
                 <img src="/tvattpass/icon.png" alt="Tvattpass Icon" className='header-icon' />
                 <h1 className='header-title'>Tvattpass</h1>
-                <Menu user={user ? { ...user, providerData: user.providerData.filter((pd): pd is firebase.UserInfo => pd !== null) } : user} />
+                <Menu user={user} />
               </div>
 
               <div className="content-container">
